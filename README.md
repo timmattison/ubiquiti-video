@@ -12,12 +12,6 @@ If you've never run this script before just run `pnpm install` and it should ins
 To fetch video from a camera you'll need the camera's ID. If you don't have your camera IDs you can get them with a
 tool like [ubiquiti-db](https://github.com/timmattison/ubiquiti-db).
 
-```bash
-./ubiquiti-video.ts list
-```
-
-And it will print out a list of your cameras as a JSON array.
-
 ### Fetching video
 
 Fetching video from a camera can be done like this:
