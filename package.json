@@ -1,0 +1,43 @@
+{
+  "name": "ubiquiti-video",
+  "version": "1.0.0",
+  "description": "Retrieves video from a Ubiquiti NVR in MKV (or MP4) format",
+  "main": "ubiquiti-video.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node ubiquiti-video.js",
+    "lint": "eslint --ext .ts --fix . -c .eslintrc.cjs"
+  },
+  "type": "module",
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@swc/core": "^1.3.68",
+    "@types/fluent-ffmpeg": "^2.1.21",
+    "@types/node": "^20.4.1",
+    "eslint": "^8.44.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-standard-with-typescript": "^36.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-n": "^16.0.1",
+    "eslint-plugin-promise": "^6.1.1",
+    "prettier": "^3.0.0",
+    "prisma": "5.0.0",
+    "swc": "^1.0.11",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@prisma/client": "5.0.0",
+    "axios": "^1.4.0",
+    "axios-retry": "^3.5.1",
+    "cmd-ts": "^0.12.1",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1",
+    "fluent-ffmpeg": "^2.1.2",
+    "node-ssh": "^13.1.0",
+    "ora": "^6.3.1",
+    "p-limit": "^4.0.0",
+    "ts-node": "^10.9.1",
+    "zod": "^3.21.4"
+  }
+}

@@ -1,0 +1,6 @@
+.env
+*.mp4
+*.mkv
+node_modules
+.idea
+schema.prisma
