@@ -4,6 +4,8 @@ This is a command-line tool to pull video from Ubiquiti's UniFi protect into MP4
 
 NOTE: In this document we assume your DVR's IP address is `192.168.1.1`. If it is different you'll need to adjust the commands and `.env` file accordingly.
 
+NOTE: If you have problems check the troubleshooting section at the bottom.
+
 ## How to use this script
 
 If you've never run this script before run the steps in the `Setup` section below.
@@ -21,7 +23,7 @@ And it will print out a list of your cameras as a JSON array.
 Fetching video from a camera can be done like this:
 
 ```bash
-ubiquiti-video fetch -c "cameraname" -s 2023-07-22T15:40:00 -e 2023-07-22T15:42:00
+./ubiquiti-video.ts fetch -c "cameraname" -s 2023-07-22T15:40:00 -e 2023-07-22T15:42:00
 ```
 
 This will do a case-insensitive search for a camera with the string `cameraname` in its name, extract two minutes of video from it
@@ -80,7 +82,7 @@ pnpm install
 
 ### Pull the DB schema and generate the Prisma code
 
-You'll need to get the database schema from your DVR for the script to run. If you receive errors about missing columns like `phy_rate` run this to get the latest schema.
+You'll need to get the database schema from your DVR for the script to run.
 
 1. In one terminal set up a tunnel to the DVR with port forwarding to PostgreSQL:
 
@@ -120,3 +122,15 @@ ssh root@192.168.1.1 -L5433:localhost:5433
 pnpm install
 pnpm dlx prisma generate
 ```
+
+# Troubleshooting
+
+## Prisma errors
+
+If you see an error like this:
+
+```text
+SyntaxError: Named export 'PrismaClient' not found
+```
+
+Or if you receive errors about missing columns like `phy_rate` pull the schema again and generate the Prisma code again.
