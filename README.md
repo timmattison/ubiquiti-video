@@ -2,15 +2,15 @@
 
 This is a command-line tool to pull video from Ubiquiti's UniFi protect into MP4 or MKV files.
 
-NOTE: In this document we assume your DVR's IP address is `192.168.1.1`. If it is different you'll need to adjust the commands and `.env` file accordingly.
-
-NOTE: If you have problems check the troubleshooting section at the bottom.
+NOTE: In this document we assume your DVR's IP address is `192.168.1.1`. If it is different you'll need to adjust the
+commands and `.env` file accordingly.
 
 ## How to use this script
 
-If you've never run this script before run the steps in the `Setup` section below.
+If you've never run this script before just run `pnpm install` and it should install everything you need.
 
-Once that's complete you can run the command to list cameras like this:
+To fetch video from a camera you'll need the camera's ID. If you don't have your camera IDs you can get them with a
+tool like [ubiquiti-db](https://github.com/timmattison/ubiquiti-db).
 
 ```bash
 ./ubiquiti-video.ts list
@@ -23,35 +23,23 @@ And it will print out a list of your cameras as a JSON array.
 Fetching video from a camera can be done like this:
 
 ```bash
-./ubiquiti-video.ts fetch -c "cameraname" -s 2023-07-22T15:40:00 -e 2023-07-22T15:42:00
+./ubiquiti-video.ts fetch -i "63eeeeeeefffffffeeeaab68" -s 2023-07-22T15:40:00 -e 2023-07-22T15:42:00
 ```
 
-This will do a case-insensitive search for a camera with the string `cameraname` in its name, extract two minutes of video from it
-from July 22nd, 2023 at 15:40:00 to 15:42:00 and convert the video to `.mkv` format.
+This will fetch two minutes of video for the camera with the ID `63eeeeeeefffffffeeeaab68` from July 22nd, 2023 at 15:
+40:00 to 15:42:00 and convert the video to `.mkv` format.
+
+The file will be called `2023-07-22_03:40:00_PM_2023-07-22_03:42:00_PM_63eeeeeeefffffffeeeaab68.mkv`.
 
 If you want the video to remain in `.mp4` format just add the `-m` flag to the command.
-
-If multiple cameras match the requested name the command will fail.
 
 ## Setup
 
 To set this script up you'll need to:
 
 - Have ffmpeg installed (if you want `.mkv` format videos)
-- Set up the SSH connection so that you can connect without a password (public key authentication)
 - Configure the `.env` file values
 - Install the dependencies
-- Pull the DB schema
-- Generate the Prisma code
-
-### Set up the SSH connection
-
-For this script to work properly you'll need to set up public key authentication to your Ubiquiti DVR. You can do this
-in the Ubiquiti Network UI under Settings -> System and `Device Authentication` at the bottom.
-
-Check `Device SSH Authentication` and add your SSH key.
-
-If you need help read [Ubiquiti's instructions on how to do this](https://help.ui.com/hc/en-us/articles/235247068-UniFi-Adding-SSH-Keys-to-UniFi-Devices).
 
 ### Fill in the .env file
 
@@ -61,14 +49,12 @@ to `.env` and fill in your own values. The example file looks like this:
 ```text
 export UbiquitiUsername=USERNAME
 export UbiquitiPassword=PASSWORD
-export UbiquitiSshUsername=root
 export UbiquitiIp=192.168.1.1
 ```
 
-Fill in your Ubiquiti credentials in the username and password fields. For some people this will be their ui.com credentials.
+Fill in your Ubiquiti credentials in the username and password fields. For some people this will be their ui.com
+credentials.
 For other people with specific local credentials you'll need to use those instead.
-
-Generally you'll leave the SSH username as `root`.
 
 Change the IP address to the IP address of your DVR, if necessary.
 
@@ -79,58 +65,3 @@ This script has only been tested with `pnpm`. `npm` and `yarn` might work but yo
 ```bash
 pnpm install
 ```
-
-### Pull the DB schema and generate the Prisma code
-
-You'll need to get the database schema from your DVR for the script to run.
-
-1. In one terminal set up a tunnel to the DVR with port forwarding to PostgreSQL:
-
-```
-ssh root@192.168.1.1 -L5433:localhost:5433
-```
-
-2. In this directory in another terminal:
-
-```
-pnpm install
-pnpm dlx prisma db pull
-pnpm dlx prisma generate
-```
-
-NOTE: If you receive an error like this:
-
-```text
-assertion failed [block != nullptr]: BasicBlock requested for unrecognized address
-```
-
-Try the command again until it works. This appears to be an issue with M1 systems. This can happen many, many times in a row. Eventually it works.
-
-## Generate the Prisma code
-
-To generate the TypeScript client from the schema do the following:
-
-1. In one terminal set up a tunnel to the DVR with port forwarding to PostgreSQL:
-
-```
-ssh root@192.168.1.1 -L5433:localhost:5433
-```
-
-2. In this directory in another terminal:
-
-```
-pnpm install
-pnpm dlx prisma generate
-```
-
-# Troubleshooting
-
-## Prisma errors
-
-If you see an error like this:
-
-```text
-SyntaxError: Named export 'PrismaClient' not found
-```
-
-Or if you receive errors about missing columns like `phy_rate` pull the schema again and generate the Prisma code again.

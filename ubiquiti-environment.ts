@@ -7,7 +7,6 @@ dotenv.config({ path: `${scriptDirname()}/.env` })
 export const UbiquitiEnvVariablesSchema = z.object({
   UbiquitiUsername: z.string(),
   UbiquitiPassword: z.string(),
-  UbiquitiSshUsername: z.string(),
   UbiquitiIp: z.string().ip(),
 })
 

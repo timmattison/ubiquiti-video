@@ -1,21 +1,37 @@
 #!/usr/bin/env -S npx ts-node-esm
 
 import { fileURLToPath } from 'url'
-import { command, flag, number, option, run, string, subcommands } from 'cmd-ts'
+import {
+  command,
+  flag,
+  number,
+  option,
+  optional,
+  run,
+  string,
+  subcommands,
+} from 'cmd-ts'
 import { z } from 'zod'
 import fs from 'fs'
 import path from 'path'
-import { getFullCameras, getSimpleCameras, getVideo } from './ubiquiti.ts'
 import { add, startOfDay } from 'date-fns'
 import ffmpeg, { type FfprobeData } from 'fluent-ffmpeg'
 import pLimit from 'p-limit'
+import { UbiquitiEnvironment } from './ubiquiti-environment.ts'
+import ora from 'ora'
+import {
+  fetchVideo,
+  type Status,
+  StatusType,
+} from '@timmattison/uprotect-fetch'
 
 export function scriptDirname() {
   return path.dirname(fileURLToPath(import.meta.url))
 }
 
 const ArgumentsSchema = z.object({
-  cameraName: z.string(),
+  cameraId: z.string(),
+  cameraName: z.string().optional(),
   start: z.date(),
   end: z.date(),
   mp4: z.boolean().default(false),
@@ -23,40 +39,61 @@ const ArgumentsSchema = z.object({
 
 type ArgumentsType = z.infer<typeof ArgumentsSchema>
 
-function includes(haystack: string, needle: string) {
-  return haystack.toLocaleLowerCase().includes(needle.toLocaleLowerCase())
-}
-
-async function listCameras() {
-  console.log(JSON.stringify(await getSimpleCameras(), null, 2))
-}
-
 async function main(args: ArgumentsType) {
-  const cameras = await getFullCameras()
-
-  const filteredCameras = cameras.filter(
-    (value) =>
-      includes(value.name, args.cameraName) ||
-      includes(value.id, args.cameraName),
-  )
-
-  if (filteredCameras.length === 0) {
-    throw new Error('No cameras matched')
-  } else if (filteredCameras.length > 1) {
-    throw new Error(
-      `Multiple cameras matched ${JSON.stringify(
-        filteredCameras.map((value) => value.name),
-      )}`,
-    )
+  const cameras = [{ id: args.cameraId, name: args.cameraName }]
+  const auth = {
+    username: UbiquitiEnvironment.UbiquitiUsername,
+    password: UbiquitiEnvironment.UbiquitiPassword,
   }
 
-  console.log(
-    JSON.stringify(
-      await getVideo(filteredCameras, args.start, args.end, args.mp4),
-      null,
-      2,
-    ),
-  )
+  const spinner = ora().start()
+
+  const result = await fetchVideo({
+    ipAddress: UbiquitiEnvironment.UbiquitiIp,
+    auth,
+    cameras,
+    start: args.start,
+    end: args.end,
+    mp4: args.mp4,
+    statusCallback: (status: Status) => {
+      switch (status.type) {
+        case StatusType.Waiting:
+          spinner.text = 'Waiting to start downloading...'
+          break
+        case StatusType.Downloading:
+          if (status.progressPercent !== undefined) {
+            spinner.text = `Downloading: ${String(status.progressPercent)}`
+          } else {
+            spinner.text = 'Downloading...'
+          }
+          break
+        case StatusType.DownloadThroughput:
+          if (status.throughputString !== undefined) {
+            spinner.text = `Download throughput: ${String(
+              status.throughputString,
+            )}/s`
+          }
+          break
+        case StatusType.Converting:
+          spinner.text = `Converting...`
+          break
+        case StatusType.Done:
+          if (status.filename !== undefined) {
+            spinner.succeed(`Done [${String(status.filename)}]`)
+          } else {
+            spinner.succeed('Done')
+          }
+          spinner.stop()
+          break
+        case StatusType.AllDone:
+          spinner.stop()
+          break
+        case StatusType.Error:
+          throw status.error
+      }
+    },
+  })
+  JSON.stringify(result, null, 2)
 }
 
 const NameVersionDescriptionSchema = z.object({
@@ -85,11 +122,17 @@ const StartOfDaySchema = z
 const fetchDayCommand = command({
   name: 'fetch-day',
   args: {
+    cameraId: option({
+      long: 'camera-id',
+      short: 'i',
+      type: string,
+      description: 'ID of the camera',
+    }),
     cameraName: option({
       long: 'camera-name',
-      short: 'c',
-      type: string,
-      description: 'name of the camera',
+      short: 'n',
+      type: optional(string),
+      description: 'name of the camera (for naming output files)',
     }),
     date: option({
       long: 'date',
@@ -120,11 +163,17 @@ const fetchDayCommand = command({
 const fetchCommand = command({
   name: 'fetch',
   args: {
+    cameraId: option({
+      long: 'camera-id',
+      short: 'i',
+      type: string,
+      description: 'ID of the camera',
+    }),
     cameraName: option({
       long: 'camera-name',
-      short: 'c',
-      type: string,
-      description: 'name of the camera',
+      short: 'n',
+      type: optional(string),
+      description: 'name of the camera (for naming output files)',
     }),
     start: option({
       long: 'start',
@@ -206,40 +255,6 @@ const extractAudioCommand = command({
   },
 })
 
-async function getAudioSampleRate(inputFile: string) {
-  return await new Promise<number>((resolve, reject) => {
-    ffmpeg(inputFile).ffprobe((err: Error | null, metadata: FfprobeData) => {
-      if (err != null) {
-        reject(err)
-        return
-      }
-
-      const audioStreams = metadata.streams.filter(
-        (stream) => stream.codec_type === 'audio',
-      )
-
-      if (audioStreams.length === 0) {
-        reject(new Error('No audio streams found'))
-        return
-      }
-
-      if (audioStreams.length > 1) {
-        reject(new Error('More than one audio stream found, can not continue'))
-        return
-      }
-
-      const sampleRate = audioStreams[0].sample_rate
-
-      if (sampleRate === undefined) {
-        reject(new Error('Audio sample rate is undefined, can not continue'))
-        return
-      }
-
-      resolve(sampleRate)
-    })
-  })
-}
-
 async function getInputDuration(inputFile: string) {
   return await new Promise<number>((resolve, reject) => {
     ffmpeg(inputFile).ffprobe((err: Error | null, metadata: FfprobeData) => {
@@ -292,20 +307,11 @@ async function extractAudio(
   })
 }
 
-const listCamerasCommand = command({
-  name: 'list-cameras',
-  args: {},
-  handler: async () => {
-    await listCameras()
-  },
-})
-
 const commandLineParser = subcommands({
   name: packageInfo.name,
   description: packageInfo.description,
   version: packageInfo.version,
   cmds: {
-    list: listCamerasCommand,
     fetch: fetchCommand,
     'fetch-day': fetchDayCommand,
     'extract-audio': extractAudioCommand,
