@@ -6,7 +6,8 @@
     "esModuleInterop": true,
     "outDir": "./dist",
     "moduleResolution": "node",
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "noEmit": true
   },
   "ts-node": {
     "swc": true
