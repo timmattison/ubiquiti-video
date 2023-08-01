@@ -20,8 +20,8 @@ Fetching video from a camera can be done like this:
 ./ubiquiti-video.ts fetch -i "63eeeeeeefffffffeeeaab68" -s 2023-07-22T15:40:00 -e 2023-07-22T15:42:00
 ```
 
-This will fetch two minutes of video for the camera with the ID `63eeeeeeefffffffeeeaab68` from July 22nd, 2023 at 15:
-40:00 to 15:42:00 and convert the video to `.mkv` format.
+This will fetch two minutes of video for the camera with the ID `63eeeeeeefffffffeeeaab68` from July 22nd, 2023 at
+15:40:00 to 15:42:00 and convert the video to `.mkv` format.
 
 The file will be called `2023-07-22_03:40:00_PM_2023-07-22_03:42:00_PM_63eeeeeeefffffffeeeaab68.mkv`.
 
